@@ -1,0 +1,5 @@
+CMakeCache.txt
+CMakeFiles/*
+*.cmake
+Makefile
+ext4-crypt
