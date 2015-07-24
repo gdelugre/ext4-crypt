@@ -19,7 +19,7 @@ void build_full_key_descriptor(key_desc_t *key_desc, full_key_desc_t *full_key_d
     strcpy(*full_key_desc, EXT4_KEY_DESC_PREFIX);
 
     for ( size_t i = 0; i < sizeof(*key_desc); i++ ) {
-        sprintf(*full_key_desc + EXT4_KEY_DESC_PREFIX_SIZE + i * 2, "%02X", (*key_desc)[i]);
+        sprintf(*full_key_desc + EXT4_KEY_DESC_PREFIX_SIZE + i * 2, "%02x", (*key_desc)[i]);
     }
 }
 
