@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <asm-generic/ioctl.h>
+#include <keyutils.h>
 
 #define VERBOSE_PRINT(opts, format, args...) ({      \
     if ( opts.verbose )                              \
@@ -100,30 +101,49 @@ unsigned flags_to_padding_length(char flags)
     return (4 << (flags & EXT4_POLICY_FLAGS_PAD_MASK));
 }
 
-static
-const char *cipher_modes[] = {
-    [EXT4_ENCRYPTION_MODE_INVALID] = "invalid",
-    [EXT4_ENCRYPTION_MODE_AES_256_XTS] = "aes-256-xts",
-    [EXT4_ENCRYPTION_MODE_AES_256_GCM] = "aes-256-gcm",
-    [EXT4_ENCRYPTION_MODE_AES_256_CBC] = "aes-256-cbc",
-    [EXT4_ENCRYPTION_MODE_AES_256_CTS] = "aes-256-cts"
+struct cipher {
+    const char *cipher_name;
+    size_t cipher_key_size;
 };
+
+static
+struct cipher cipher_modes[] = {
+    [EXT4_ENCRYPTION_MODE_INVALID] = { "invalid", 0 },
+    [EXT4_ENCRYPTION_MODE_AES_256_XTS] = { "aes-256-xts", EXT4_AES_256_XTS_KEY_SIZE },
+    [EXT4_ENCRYPTION_MODE_AES_256_GCM] = { "aes-256-gcm", EXT4_AES_256_GCM_KEY_SIZE },
+    [EXT4_ENCRYPTION_MODE_AES_256_CBC] = { "aes-256-cbc", EXT4_AES_256_CBC_KEY_SIZE },
+    [EXT4_ENCRYPTION_MODE_AES_256_CTS] = { "aes-256-cts", EXT4_AES_256_CTS_KEY_SIZE },
+};
+
+#define NR_EXT4_ENCRYPTION_MODES (sizeof(cipher_modes) / sizeof(cipher_modes[0]))
 
 static inline
 const char *cipher_mode_to_string(unsigned char mode)
 {
-    if ( mode >= sizeof(cipher_modes) )
+    if ( mode >= NR_EXT4_ENCRYPTION_MODES )
         return "invalid";
 
-    return cipher_modes[mode];
+    return cipher_modes[mode].cipher_name;
 }
 
 static inline
 char cipher_string_to_mode(const char *cipher)
 {
-    for ( size_t i = 0; i < sizeof(cipher_modes); i++ ) {
-        if ( strcmp(cipher, cipher_modes[i]) == 0 )
+    for ( size_t i = 0; i < NR_EXT4_ENCRYPTION_MODES; i++ ) {
+        if ( strcmp(cipher, cipher_modes[i].cipher_name) == 0 )
             return i;
+    }
+
+    fprintf(stderr, "Invalid cipher mode: %s\n", cipher);
+    abort();
+}
+
+static inline
+size_t cipher_key_size(const char *cipher)
+{
+    for ( size_t i = 0; i < NR_EXT4_ENCRYPTION_MODES; i++ ) {
+        if ( strcmp(cipher, cipher_modes[i].cipher_name) == 0 )
+            return cipher_modes[i].cipher_key_size;
     }
 
     fprintf(stderr, "Invalid cipher mode: %s\n", cipher);
@@ -138,7 +158,8 @@ int container_create(const char *dir_path, struct ext4_crypt_options);
 int container_attach(const char *dir_path, struct ext4_crypt_options);
 int container_detach(const char *dir_path, struct ext4_crypt_options);
 void generate_random_key_descriptor(key_desc_t *);
-int find_key_by_descriptor(key_desc_t *, long *);
-int request_key_for_descriptor(key_desc_t *);
+int find_key_by_descriptor(key_desc_t *, key_serial_t *);
+int request_key_for_descriptor(key_desc_t *, struct ext4_crypt_options);
+int remove_key_for_descriptor(key_desc_t *);
 
 #endif
