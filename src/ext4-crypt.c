@@ -43,10 +43,9 @@ bool is_valid_padding(unsigned padding)
         case 16:
         case 32:
             return true;
-
-        default:
-            return false;
     }
+
+    return false;
 }
 
 int main(int argc, char *argv[])
@@ -115,7 +114,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    int status = EXIT_SUCCESS;
+    int status = 0;
     const char *command = argv[optind];
     const char *dir_path = argv[optind + 1];
 
@@ -137,8 +136,8 @@ int main(int argc, char *argv[])
     else {
         fprintf(stderr, "Error: unrecognized command %s\n", command);
         usage(program);
-        status = EXIT_FAILURE;
+        status = -1;
     }
 
-    return status;
+    return (status == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

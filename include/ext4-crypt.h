@@ -65,6 +65,7 @@ struct ext4_encryption_key {
 #define EXT4_IOC_GET_ENCRYPTION_PWSALT  _IOW('f', 20, __u8[16])
 #define EXT4_IOC_GET_ENCRYPTION_POLICY  _IOW('f', 21, struct ext4_encryption_policy)
 
+#define EXT4_MAX_PASSPHRASE_SZ 128
 #define EXT4_ENCRYPTION_KEY_TYPE "logon"
 #define EXT4_FULL_KEY_DESCRIPTOR_SIZE (EXT4_KEY_DESCRIPTOR_SIZE * 2 + EXT4_KEY_DESC_PREFIX_SIZE)
 
@@ -157,7 +158,7 @@ int container_status(const char *dir_path);
 int container_create(const char *dir_path, struct ext4_crypt_options);
 int container_attach(const char *dir_path, struct ext4_crypt_options);
 int container_detach(const char *dir_path, struct ext4_crypt_options);
-void generate_random_key_descriptor(key_desc_t *);
+void generate_random_name(char *, size_t);
 int find_key_by_descriptor(key_desc_t *, key_serial_t *);
 int request_key_for_descriptor(key_desc_t *, struct ext4_crypt_options);
 int remove_key_for_descriptor(key_desc_t *);

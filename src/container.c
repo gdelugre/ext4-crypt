@@ -95,6 +95,10 @@ int set_ext4_encryption_policy(int dirfd, struct ext4_encryption_policy *policy)
                 fprintf(stderr, "Please ensure your kernel has support for CONFIG_EXT4_ENCRYPTION.\n");
                 return -1;
 
+            case EINVAL:
+                fprintf(stderr, "Encryption parameters do not match with already previous ones.\n");
+                return -1;
+
             case ENOTEMPTY:
                 fprintf(stderr, "Cannot create encrypted container: directory must be empty.\n");
                 return -1;
@@ -124,7 +128,7 @@ int setup_ext4_encryption(int dirfd, struct ext4_crypt_options opts)
     policy.flags = padding_length_to_flags(opts.filename_padding);
 
     if ( opts.requires_descriptor )
-        generate_random_key_descriptor(&opts.key_descriptor);
+        generate_random_name(opts.key_descriptor, sizeof(opts.key_descriptor));
 
     memcpy(policy.master_key_descriptor, opts.key_descriptor, sizeof(policy.master_key_descriptor));
 
@@ -145,13 +149,13 @@ int container_status(const char *dir_path)
 {
     int dirfd = open_ext4_directory(dir_path);
     if ( dirfd == -1 )
-        return EXIT_FAILURE;
+        return -1;
 
     struct ext4_encryption_policy policy;
     bool has_policy;
 
     if ( get_ext4_encryption_policy(dirfd, &policy, &has_policy) < 0 )
-        return EXIT_FAILURE;
+        return -1;
 
     if ( !has_policy )
         printf("%s: Regular directory\n", dir_path);
@@ -164,14 +168,39 @@ int container_status(const char *dir_path)
         printf("Filename padding: %d\n", flags_to_padding_length(policy.flags));
         printf("Key descriptor:   %s\n", policy.master_key_descriptor);
         
-        long key_serial;
+        key_serial_t key_serial;
         if ( find_key_by_descriptor(&policy.master_key_descriptor, &key_serial) == -1 )
             printf("Key serial:       not found\n");
         else
-            printf("Key serial:       %ld\n", key_serial);
+            printf("Key serial:       %d\n", key_serial);
     }
 
-    return EXIT_SUCCESS;
+    return 0;
+}
+
+//
+// XXX: There seems to be a bug when the block if the block is unmounted but no encrypted inode was created.
+// We create here a dummy inode file and unlinks it immediately.
+//
+static
+int create_dummy_inode(int dirfd)
+{
+    char dummy_name[16];
+    generate_random_name(dummy_name, sizeof(dummy_name));
+
+    int fd = openat(dirfd, dummy_name, O_NONBLOCK|O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR);
+    if ( fd == -1 ) {
+        fprintf(stderr, "Cannot create inode in directory: %s\n", strerror(errno));
+        return -1;
+    }
+
+    if ( unlinkat(dirfd, dummy_name, 0) != 0 ) {
+        fprintf(stderr, "Cannot unlink inode in directory: %s\n", strerror(errno));
+        return -1;
+    }
+
+    close(fd);
+    return 0;
 }
 
 //
@@ -181,26 +210,30 @@ int container_create(const char *dir_path, struct ext4_crypt_options opts)
 {
     int dirfd = open_ext4_directory(dir_path);
     if ( dirfd == -1 )
-        return EXIT_FAILURE;
+        return -1;
 
     struct ext4_encryption_policy policy;
     bool has_policy;
 
     // We first check the directory is not already encrypted.
     if ( get_ext4_encryption_policy(dirfd, &policy, &has_policy) < 0 )
-        return EXIT_FAILURE;
+        return -1;
     
     if ( has_policy ) {
         fprintf(stderr, "Cannot create encrypted container at %s: directory is already encrypted.\n", dir_path);
-        return EXIT_FAILURE;
+        return -1;
     }
 
     if ( setup_ext4_encryption(dirfd, opts) < 0 )
-        return EXIT_FAILURE;
+        return -1;
+    
+    // Automatically attach the directory at creation.
+    int ret = container_attach(dir_path, opts);
+    if ( ret == 0 && create_dummy_inode(dirfd) == 0 )
+        printf("%s: Encryption policy is now set.\n", dir_path);
 
-    printf("%s: Encryption policy is now set.\n", dir_path);
     close(dirfd);
-    return EXIT_SUCCESS;
+    return ret;
 }
 
 //
@@ -210,32 +243,50 @@ int container_attach(const char *dir_path, struct ext4_crypt_options opts)
 {
     int dirfd = open_ext4_directory(dir_path);
     if ( dirfd == -1 )
-        return EXIT_FAILURE;
+        return -1;
     
     struct ext4_encryption_policy policy;    
     bool has_policy;
 
     // We check that an encryption policy has already been defined for this directory.
     if ( get_ext4_encryption_policy(dirfd, &policy, &has_policy) < 0 )
-        return EXIT_FAILURE;
+        return -1;
 
     if ( !has_policy ) {
         fprintf(stderr, "Cannot attach key to directory %s: not an encrypted directory.\n", dir_path);
-        return EXIT_FAILURE;
+        return -1;
     }
 
-    request_key_for_descriptor(&policy.master_key_descriptor);
+    request_key_for_descriptor(&policy.master_key_descriptor, opts);
 
     close(dirfd);
-    return EXIT_SUCCESS;
+    return 0;
 }
 
 int container_detach(const char *dir_path, struct ext4_crypt_options opts)
 {
+    (void) opts;
+
     int dirfd = open_ext4_directory(dir_path);
     if ( dirfd == -1 )
-        return EXIT_FAILURE;
+        return -1;
     
+    struct ext4_encryption_policy policy;    
+    bool has_policy;
+
+    // We check that an encryption policy has already been defined for this directory.
+    if ( get_ext4_encryption_policy(dirfd, &policy, &has_policy) < 0 )
+        return -1;
+
+    if ( !has_policy ) {
+        fprintf(stderr, "%s has no active encryption policy.\n", dir_path);
+        return -1;
+    }
+
+    if ( remove_key_for_descriptor(&policy.master_key_descriptor) < 0 )
+        return -1;
+    
+    printf("%s: encryption key detached.\n", dir_path);
     close(dirfd);
-    return EXIT_SUCCESS;
+    return 0;
 }
