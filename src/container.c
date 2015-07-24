@@ -166,7 +166,7 @@ int container_status(const char *dir_path)
         printf("Filename cipher:  %s\n", cipher_mode_to_string(policy.filenames_encryption_mode));
         printf("Contents cipher:  %s\n", cipher_mode_to_string(policy.contents_encryption_mode));
         printf("Filename padding: %d\n", flags_to_padding_length(policy.flags));
-        printf("Key descriptor:   %s\n", policy.master_key_descriptor);
+        printf("Key descriptor:   %.8s\n", policy.master_key_descriptor);
         
         key_serial_t key_serial;
         if ( find_key_by_descriptor(&policy.master_key_descriptor, &key_serial) == -1 )
@@ -185,8 +185,10 @@ int container_status(const char *dir_path)
 static
 int create_dummy_inode(int dirfd)
 {
-    char dummy_name[16];
-    generate_random_name(dummy_name, sizeof(dummy_name));
+    char dummy_name[16 + 1];
+
+    generate_random_name(dummy_name, sizeof(dummy_name) - 1);
+    dummy_name[sizeof(dummy_name) - 1] = '\0';
 
     int fd = openat(dirfd, dummy_name, O_NONBLOCK|O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR);
     if ( fd == -1 ) {
