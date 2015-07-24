@@ -286,7 +286,7 @@ int container_detach(const char *dir_path, struct ext4_crypt_options opts)
     if ( remove_key_for_descriptor(&policy.master_key_descriptor) < 0 )
         return -1;
     
-    printf("%s: encryption key detached.\n", dir_path);
+    printf("Encryption key detached from %s.\n", dir_path);
     close(dirfd);
     return 0;
 }
