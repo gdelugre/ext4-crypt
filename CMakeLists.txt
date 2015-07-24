@@ -15,4 +15,4 @@ add_executable(${CMAKE_PROJECT_NAME}
 
 set(CMAKE_C_COMPILER "clang")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -std=gnu11")
-target_link_libraries(${CMAKE_PROJECT_NAME} keyutils)
+target_link_libraries(${CMAKE_PROJECT_NAME} keyutils scrypt)
