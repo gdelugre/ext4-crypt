@@ -14,6 +14,8 @@ add_executable(${CMAKE_PROJECT_NAME}
 )
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -std=gnu11")
+set(CMAKE_EXE_LINKER_FLAGS "-s")
+
 target_link_libraries(${CMAKE_PROJECT_NAME} keyutils scrypt)
 install(TARGETS ext4-crypt
         DESTINATION bin)
