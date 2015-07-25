@@ -4,6 +4,8 @@ Linux kernel 4.1 introduced native encryption for the ext4 filesystem.
 
 This is a userspace tool to manage encrypted ext4 directories.
 
+**Warning**: this kernel feature is very unstable and experimental at the moment. I managed to crash my kernel (4.1.2) a few times very easily just by playing with it.
+
 ## Usage
 
 ### Encrypting a new directory
