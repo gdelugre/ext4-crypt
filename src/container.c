@@ -31,28 +31,39 @@ bool is_ext4_filesystem(const char *path)
 }
 
 //
-// Opens a directory mounted on a ext4 filesystem.
-// Returns file descriptor.
+// Opens an existing file on an ext4 filesystem.
+// Returns a read-only file descriptor.
 //
 static
-int open_ext4_directory(const char *dir_path) 
+int open_ext4_path(const char *path, int flags)
 {
-    if ( !is_ext4_filesystem(dir_path) ) {
-        fprintf(stderr, "Error: %s is not a ext4 directory.\n", dir_path);
+    if ( !is_ext4_filesystem(path) ) {
+        fprintf(stderr, "Error: %s does not belong to an ext4 filesystem.\n", path);
         return -1;
     }
 
-    int dirfd = open(dir_path, O_RDONLY | O_DIRECTORY | O_NONBLOCK);
-    if ( dirfd == -1 ) {
+    int open_flags = O_RDONLY | O_NONBLOCK | flags;
+    int fd = open(path, open_flags);
+    if ( fd == -1 ) {
         if ( errno == ENOTDIR )
-            fprintf(stderr, "Invalid argument: %s is not a directory\n", dir_path);
+            fprintf(stderr, "Invalid argument: %s is not a directory\n", path);
         else
-            fprintf(stderr, "Cannot open %s: %s\n", dir_path, strerror(errno));
+            fprintf(stderr, "Cannot open %s: %s\n", path, strerror(errno));
 
         return -1;
     }
 
-    return dirfd;
+    return fd;
+}
+
+//
+// Opens an existing directory on an ext4 filesystem.
+// Returns a file descriptor of the directory.
+//
+static
+int open_ext4_directory(const char *dir_path)
+{
+    return open_ext4_path(dir_path, O_DIRECTORY);
 }
 
 //
