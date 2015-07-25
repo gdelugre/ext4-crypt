@@ -160,7 +160,7 @@ int container_attach(const char *dir_path, struct ext4_crypt_options);
 int container_detach(const char *dir_path, struct ext4_crypt_options);
 void generate_random_name(char *, size_t);
 int find_key_by_descriptor(key_desc_t *, key_serial_t *);
-int request_key_for_descriptor(key_desc_t *, struct ext4_crypt_options);
+int request_key_for_descriptor(key_desc_t *, struct ext4_crypt_options, bool);
 int remove_key_for_descriptor(key_desc_t *);
 
 #endif

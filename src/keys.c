@@ -179,7 +179,7 @@ int remove_key_for_descriptor(key_desc_t *key_desc)
 //
 // Requests a key to be attached to the specified descriptor.
 //
-int request_key_for_descriptor(key_desc_t *key_desc, struct ext4_crypt_options opts)
+int request_key_for_descriptor(key_desc_t *key_desc, struct ext4_crypt_options opts, bool confirm)
 {
     int retries = 5;
     char passphrase[EXT4_MAX_PASSPHRASE_SZ];
@@ -194,6 +194,9 @@ int request_key_for_descriptor(key_desc_t *key_desc, struct ext4_crypt_options o
             fprintf(stderr, "Passphrase cannot be empty.\n");
             continue;
         }
+
+        if ( !confirm )
+            break;
 
         read_passphrase("Confirm passphrase: ", confirm_passphrase, sizeof(confirm_passphrase));
         if ( strcmp(passphrase, confirm_passphrase) == 0 )

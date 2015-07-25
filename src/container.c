@@ -226,16 +226,31 @@ int container_create(const char *dir_path, struct ext4_crypt_options opts)
         return -1;
     }
 
+    // Creates the encryption policy.
     if ( setup_ext4_encryption(dirfd, opts) < 0 )
         return -1;
-    
-    // Automatically attach the directory at creation.
-    int ret = container_attach(dir_path, opts);
-    if ( ret == 0 && create_dummy_inode(dirfd) == 0 )
-        printf("%s: Encryption policy is now set.\n", dir_path);
 
+    // Checks the encryption policy was successfully created.
+    if ( get_ext4_encryption_policy(dirfd, &policy, &has_policy) < 0 )
+        return -1;
+    
+    if ( !has_policy ) {
+        fprintf(stderr, "Encryption policy creation failed for %s.\n", dir_path);
+        return -1;
+    }
+
+    // Attaches a key to the directory.
+    if ( request_key_for_descriptor(&policy.master_key_descriptor, opts, true) < 0 )
+        return -1;
+
+    // XXX: must write a file to the directory...
+    // The directory is left in an inconsistent state if the superblock is unmounted before any inode is created.
+    if ( create_dummy_inode(dirfd) < 0 )
+        return -1;
+
+    printf("%s: Encryption policy is now set.\n", dir_path);
     close(dirfd);
-    return ret;
+    return 0;
 }
 
 //
@@ -259,7 +274,8 @@ int container_attach(const char *dir_path, struct ext4_crypt_options opts)
         return -1;
     }
 
-    request_key_for_descriptor(&policy.master_key_descriptor, opts);
+    if ( request_key_for_descriptor(&policy.master_key_descriptor, opts, false) < 0 )
+        return -1;
 
     close(dirfd);
     return 0;
