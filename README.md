@@ -77,7 +77,13 @@ directory if you want to remove the encryption.
 
 ### Plaintext filenames steal appear after detaching the key
 
-Yep, that also seems to be a kernel bug... 
+That is a kernel issue. The dentries cache is not invalidated when you remove the key and still contains the plaintext filenames.
+
+You must remount the device or force a filesystem cache flush with:
+
+```console
+# echo 2 > /proc/sys/vm/drop_caches
+```
 
 ## Dependencies
 
