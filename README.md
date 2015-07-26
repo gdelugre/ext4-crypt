@@ -36,7 +36,6 @@ FTRsD7y2dUyXl6e8omKYbB  IdLqPffZBKSebTeh6hZI7C  tReYAc2tKyIOHSIcaSV2DB
 
 $ ext4-crypt attach vault
 Enter passphrase: 
-Confirm passphrase: 
 
 $ ls vault
 fstab  passwd  services
