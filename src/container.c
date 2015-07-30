@@ -4,11 +4,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <linux/fcntl.h>
 #include <linux/magic.h>
 #include <sys/vfs.h>
+#include <sys/ioctl.h>
 #include <asm-generic/ioctl.h>
-#include <stropts.h>
 #include <assert.h>
 #include <errno.h>
 
