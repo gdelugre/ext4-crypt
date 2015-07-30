@@ -1,4 +1,4 @@
-project(ext4-crypt)
+project(ext4-crypt C)
 cmake_minimum_required(VERSION 2.8)
 
 include_directories(include)
