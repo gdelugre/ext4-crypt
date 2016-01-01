@@ -40,11 +40,14 @@ int derive_passphrase_to_key(char *pass, size_t pass_sz, struct ext4_encryption_
 static
 void build_full_key_descriptor(key_desc_t *key_desc, full_key_desc_t *full_key_desc)
 {
-    strcpy(*full_key_desc, EXT4_KEY_DESC_PREFIX);
+    char tmp[sizeof(*full_key_desc) + 1]; // one extra space for terminating zero
+    strcpy(tmp, EXT4_KEY_DESC_PREFIX);
 
     for ( size_t i = 0; i < sizeof(*key_desc); i++ ) {
-        sprintf(*full_key_desc + EXT4_KEY_DESC_PREFIX_SIZE + i * 2, "%02x", (*key_desc)[i]);
+        snprintf(tmp + EXT4_KEY_DESC_PREFIX_SIZE + i * 2, 3, "%02x", (*key_desc)[i] & 0xff);
     }
+
+    memcpy(*full_key_desc, tmp, sizeof(*full_key_desc));
 }
 
 // Fill key buffer with zeros.
