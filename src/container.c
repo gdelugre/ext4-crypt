@@ -176,7 +176,12 @@ int container_status(const char *dir_path)
         printf("Filename cipher:  %s\n", cipher_mode_to_string(policy.filenames_encryption_mode));
         printf("Contents cipher:  %s\n", cipher_mode_to_string(policy.contents_encryption_mode));
         printf("Filename padding: %d\n", flags_to_padding_length(policy.flags));
-        printf("Key descriptor:   %.8s\n", policy.master_key_descriptor);
+
+        printf("Key descriptor:   0x");
+        for (int i=0; i<EXT4_KEY_DESCRIPTOR_SIZE; ++i) {
+                printf("%02X", policy.master_key_descriptor[i] & 0xff);
+        }
+        printf("\n");
         
         key_serial_t key_serial;
         if ( find_key_by_descriptor(&policy.master_key_descriptor, &key_serial) == -1 )
