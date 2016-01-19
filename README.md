@@ -74,7 +74,7 @@ The encryption policy is stored at the inode level and cannot be removed from
 userspace. You'll need to provide the right key and copy the data to another
 directory if you want to remove the encryption.
 
-### Plaintext filenames steal appear after detaching the key
+### Plaintext filenames still appear after detaching the key
 
 That is a kernel issue. The dentries cache is not invalidated when you remove the key and still contains the plaintext filenames.
 
