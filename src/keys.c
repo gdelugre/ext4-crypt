@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -59,25 +60,33 @@ void zero_key(void *key, size_t key_sz)
 }
 
 //
-// Reads passphrase from terminal input.
+// Reads passphrase from standard input.
 //
 static
-size_t read_passphrase(const char *prompt, char *key, size_t n)
+ssize_t read_passphrase(const char *prompt, char *key, size_t n)
 {
+    int stdin_fd = fileno(stdin);
+    const bool tty_input = isatty(stdin_fd);
     struct termios old, new;
     size_t key_sz = 0;
 
-    fprintf(stderr, "%s", prompt);
-    fflush(stderr);
+    // Shows prompt and disables echo.
+    if ( tty_input ) {
+        fprintf(stderr, "%s", prompt);
+        fflush(stderr);
 
-    if ( tcgetattr(fileno(stdin), &old) != 0 )
-        return -1;
+        if ( tcgetattr(stdin_fd, &old) != 0 ) {
+            perror("tcgetattr");
+            return -1;
+        }
 
-    /* Disable echo. */
-    new = old;
-    new.c_lflag &= ~ECHO;
-    if ( tcsetattr(fileno(stdin), TCSAFLUSH, &new) != 0 )
-        return -1;
+        new = old;
+        new.c_lflag &= ~ECHO;
+        if ( tcsetattr(stdin_fd, TCSAFLUSH, &new) != 0 ) {
+            perror("tcsetattr");
+            return -1;
+        }
+    }
 
     if ( fgets(key, n, stdin) ) {
         key_sz = strlen(key);
@@ -87,10 +96,13 @@ size_t read_passphrase(const char *prompt, char *key, size_t n)
         key[--key_sz] = '\0';
     }
 
-    /* Restore echo. */
-    tcsetattr(fileno(stdin), TCSAFLUSH, &old);
+    // Restores echo.
+    if ( tty_input ) {
+        tcsetattr(stdin_fd, TCSAFLUSH, &old);
 
-    fprintf(stderr, "\n");
+        fprintf(stderr, "\n");
+    }
+
     return key_sz;
 }
 
@@ -187,12 +199,15 @@ int request_key_for_descriptor(key_desc_t *key_desc, struct ext4_crypt_options o
     int retries = 5;
     char passphrase[EXT4_MAX_PASSPHRASE_SZ];
     char confirm_passphrase[sizeof(passphrase)];
-    size_t pass_sz;
+    ssize_t pass_sz;
     full_key_desc_t full_key_descriptor;
     build_full_key_descriptor(key_desc, &full_key_descriptor);
 
     while ( --retries >= 0 ) {
         pass_sz = read_passphrase("Enter passphrase: ", passphrase, sizeof(passphrase));
+        if ( pass_sz < 0 )
+            return -1;
+
         if ( pass_sz == 0 ) {
             fprintf(stderr, "Passphrase cannot be empty.\n");
             continue;
