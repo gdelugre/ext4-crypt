@@ -225,6 +225,9 @@ int create_dummy_inode(int dirfd)
 //
 int container_create(const char *dir_path, struct ext4_crypt_options opts)
 {
+    if ( crypto_init() == -1 )
+        return -1;
+
     int dirfd = open_ext4_directory(dir_path);
     if ( dirfd == -1 )
         return -1;
@@ -273,6 +276,9 @@ int container_create(const char *dir_path, struct ext4_crypt_options opts)
 //
 int container_attach(const char *dir_path, struct ext4_crypt_options opts)
 {
+    if ( crypto_init() == -1 )
+        return -1;
+
     int dirfd = open_ext4_directory(dir_path);
     if ( dirfd == -1 )
         return -1;
@@ -296,10 +302,11 @@ int container_attach(const char *dir_path, struct ext4_crypt_options opts)
     return 0;
 }
 
-int container_detach(const char *dir_path, struct ext4_crypt_options opts)
+//
+// Detaches the key from an encrypted directory.
+//
+int container_detach(const char *dir_path, struct ext4_crypt_options UNUSED opts)
 {
-    (void) opts;
-
     int dirfd = open_ext4_directory(dir_path);
     if ( dirfd == -1 )
         return -1;

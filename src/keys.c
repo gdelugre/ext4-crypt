@@ -4,11 +4,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/prctl.h>
 #include <fcntl.h>
 #include <linux/random.h>
 #include <time.h>
 #include <keyutils.h>
-#include <libscrypt.h>
+#include <sodium.h>
 #include <termios.h>
 #include <errno.h>
 
@@ -22,10 +23,10 @@ int derive_passphrase_to_key(char *pass, size_t pass_sz, struct ext4_encryption_
 {
     const unsigned char salt[] = "ext4";
 
-    int ret = libscrypt_scrypt((uint8_t *) pass, pass_sz, 
-                               salt, sizeof(salt) - 1, 
-                               SCRYPT_N, SCRYPT_r, SCRYPT_p, 
-                               (uint8_t *) key->raw, key->size);
+    int ret = crypto_pwhash_scryptsalsa208sha256_ll((uint8_t *) pass, pass_sz,
+                                                    salt, sizeof(salt) - 1,
+                                                    (1 << 14), 8, 16, // N, r, p
+                                                    key->raw, key->size);
 
     if ( ret != 0 ) {
         fprintf(stderr, "scrypt failed: cannot derive passphrase\n");
@@ -55,8 +56,7 @@ void build_full_key_descriptor(key_desc_t *key_desc, full_key_desc_t *full_key_d
 static
 void zero_key(void *key, size_t key_sz)
 {
-    void *(* volatile memset_s)(void *s, int c, size_t n) = memset;
-    memset_s(key, 0, key_sz); 
+    sodium_memzero(key, key_sz);
 }
 
 //
@@ -107,31 +107,34 @@ ssize_t read_passphrase(const char *prompt, char *key, size_t n)
 }
 
 //
-// Initializes state of libc PRNG.
+// Initializes the state of the libc PRNG.
 //
 static
-void init_random()
+void random_init()
 {
-    unsigned int seed;
-
-#if defined(SYS_getrandom)
-    syscall(SYS_getrandom, &seed, sizeof(seed), GRND_NONBLOCK);
-#else
-    int fd = open("/dev/urandom", O_RDONLY);
-    if ( fd == -1 ) {
-        fprintf(stderr, "Cannot open /dev/urandom: %s\n", strerror(errno));
-        abort();
-    }
-
-    if ( read(fd, &seed, sizeof(seed)) != sizeof(seed) ) {
-        fprintf(stderr, "Cannot read /dev/urandom: %s\n", strerror(errno));
-        abort();
-    }
-
-    close(fd);
-#endif
+    unsigned int seed = randombytes_random();
 
     srandom(seed);
+}
+
+//
+// Initializes the cryptographic library.
+//
+int crypto_init()
+{
+    if ( sodium_init() == -1 ) {
+        fprintf(stderr, "Cannot initialize libsodium.\n");
+        return -1;
+    }
+
+    // Ensures the process cannot be attached to with ptrace and disables core dumps.
+    if ( prctl(PR_SET_DUMPABLE, 0) != 0 ) {
+        perror("prctl");
+        return -1;
+    }
+
+    random_init();
+    return 0;
 }
 
 //
@@ -147,7 +150,6 @@ void generate_random_name(char *name, size_t length)
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
     };
 
-    init_random();
     for ( size_t i = 0; i < length; i++ ) {
         name[i] = key_charset[ random() % sizeof(key_charset) ];
     }

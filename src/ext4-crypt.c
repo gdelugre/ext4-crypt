@@ -37,15 +37,7 @@ void usage(const char *program)
 static
 bool is_valid_padding(unsigned padding)
 {
-    switch ( padding ) {
-        case 4:
-        case 8:
-        case 16:
-        case 32:
-            return true;
-    }
-
-    return false;
+    return ( padding == 4 || padding == 8 || padding == 16 || padding == 32 );
 }
 
 int main(int argc, char *argv[])

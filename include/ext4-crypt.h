@@ -7,6 +7,7 @@
 #include <asm-generic/ioctl.h>
 #include <keyutils.h>
 
+#define UNUSED __attribute__((unused))
 #define VERBOSE_PRINT(opts, format, args...) ({      \
     if ( opts.verbose )                              \
         fprintf(stderr, format "\n", ##args); \
@@ -57,7 +58,7 @@ struct ext4_encryption_policy {
 
 struct ext4_encryption_key {
     uint32_t mode;
-    char raw[EXT4_MAX_KEY_SIZE];
+    unsigned char raw[EXT4_MAX_KEY_SIZE];
     uint32_t size;
 };
 
@@ -154,6 +155,7 @@ size_t cipher_key_size(const char *cipher)
 typedef char key_desc_t[EXT4_KEY_DESCRIPTOR_SIZE];
 typedef char full_key_desc_t[EXT4_FULL_KEY_DESCRIPTOR_SIZE];
 
+int crypto_init();
 int container_status(const char *dir_path);
 int container_create(const char *dir_path, struct ext4_crypt_options);
 int container_attach(const char *dir_path, struct ext4_crypt_options);

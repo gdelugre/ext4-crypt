@@ -87,4 +87,4 @@ You must remount the device or force a filesystem cache flush with:
 ## Dependencies
 
 - libkeyutils
-- [libscrypt](https://github.com/technion/libscrypt)
+- [libsodium](http://download.libsodium.org/doc/)
